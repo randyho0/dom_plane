@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>DOM版的飞机游戏</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+	</head>
+	<body>
+		<!-- 使用DOM开发游戏，性能还是挺差，处于能跑的状态 -->
+		<!-- 需求点
+		1. 实现游戏Game对象的定义
+			new Game()
+				init方法---实例化子对象----背景图,玩家飞机，敌机
+						---开启一个全局计时器---游戏主逻辑
+						----定义全局动画的帧数 -->
+		<!-- 2. 实现背景图的无缝轮播
+				init方法 ---- 背景图的尺寸
+							  背景图滚动功能
+							  无缝滚动功能 -->
+		<!-- 3. 实现玩家飞机的基础功能
+			    init方法---飞机的尺寸
+				        ---飞机开始坐标(在屏幕的中心) -->
+		<!-- 4. 实现子弹的创建，移动
+				init方法---子弹的尺寸
+						---子弹的坐标 -->
+		<!-- 5. 碰撞检测----检测两个物体的坐标，是否有交集
+				抽象成一个单独的对象
+				检测的对象--- 玩家vs敌机 子弹vs敌机 -->
+
+
+		<!-- 碰撞检测的条件  
+				玩家Y=<敌机Y &&  敌机X <= 玩家X <= 敌机X+敌机的宽度 -->
+
+
+		<style type="text/css">
+			body {
+				margin: 0;
+			}
+
+			#main {
+				position: relative;
+
+				width: 100vw;
+				height: 100vh;
+				overflow: hidden;
+			}
+
+			.bg {
+				position: absolute;
+				top: 0;
+				left: 0;
+
+				display: block;
+				width: 100vw;
+				height: 100vh;
+			}
+
+			.player {
+				position: absolute;
+				/* bottom: 0; */
+				left: 0;
+				z-index: 1;
+				background-color: blue;
+			}
+
+			.enemy_plane {
+				position: absolute;
+				left: 0;
+				top: 0;
+				z-index: 1;
+				background-color: red;
+			}
+
+			.bullet {
+				position: absolute;
+				left: 0;
+				top: 0;
+				z-index: 1;
+			}
+		</style>
+		<div id="main">
+			<!-- <img src="images/bullet.png" class="bullet" > -->
+			<img src="images/hero.png" class="player">
+			<img src="images/bg.jpg" class="bg">
+		</div>
+		<script type="text/javascript">
+			window.onload = function() {
+				window.game = new Game();
+			}
+			// 单独配置一个舞台信息的对象
+			const Stage = {
+				width: window.innerWidth,
+				height: window.innerHeight
+			}
+
+			function Game() {
+				this.init();
+			};
+			Game.prototype.init = function() {
+				//将当前指向Game对象的this指针,缓存下来
+				let that = this;
+				// 正常来说，创建背景对象-然后再动态bg图片
+				this.bg = new BackGround();
+
+				this.frames = 0;
+				// 实例化玩家飞机，敌机
+				this.player = new Player();
+
+				// 实例化敌机
+				this.enemy = new Enemy();
+
+				// 实例化子弹类
+				this.bullet = new Bullet();
+
+				// 生成一个主逻辑的计时器
+				this.gameTimer = setInterval(function() {
+					that.frames++; //记录游戏总帧数
+					that.bg.move();
+					that.bullet.create();//产生子弹
+					that.bullet.move();
+					that.enemy.create(); //产生敌机
+					that.enemy.move();
+					// 谁调用函数，this就指向谁
+				}, 17);
+			}
+		</script>
+		<script type="text/javascript">
+			
+			// 矩形碰撞
+			//参考链接 
+			//http://www.it165.net/pro/html/201409/22717.html
+			var AABBHit = function(a, b) {
+				// a代表玩家飞机，
+				// b代表敌机
+				// 得到两个矩形中心点坐标，
+				// 计算两点距离,是否小于两个矩形总长度
+				
+				// 另一种思路，就是比较投影上面的点
+				// 这样不需要调用Math.abs方法，效率高一点
+				// 满足下面四个条件其中之一，则没有碰撞
+				// 四个条件都不满足，则说明碰撞了
+				// （1）物体A的Y轴方向最小值大于物体B的Y轴方向最大值;
+					// 玩家Y轴方向最小值  敌机Y轴方向最大值
+				let condi1 = (a.pos_y > b.top + b.height);
+				// let condi1 = (a.pos_y     >     b.top + b.height) 
+					
+				// （2）物体A的X轴方向最小值大于物体B的X轴方向最大值;
+					// 玩家的X轴方向最小值   敌机的X轴方向最大值
+				let condi2 = (a.pos_x > b.left + b.width);
+				// let condi2 = (a.pos_x    > b.left + b.width)
+				// （3）物体B的Y轴方向最小值大于物体A的Y轴方向最大值；
+					// 敌机的Y轴方向最小值    玩家的Y轴方向最大值
+				// 大前提，当敌机 经过 || 处在 原点后开始算的
+				let condi3 = (b.top > a.pos_y + a.height);
+				// let condi3 = (b.top > a.pos_y + a.height)
+					
+				// （4）物体B的X轴方向最小值大于物体A的X轴方向最大值；
+					// 敌机的X轴方向最小值    玩家的X轴方向最大值
+				let condi4 = (b.left > a.pos_x + a.width)
+				
+				// 这四个条件，是证明，两个对象 "没有发生碰撞"
+				// let condi4 = (b.left    >  a.pos_x+a.width)
+				// 这四个条件的结果，取反为true的话，说明有碰撞
+				return !(condi1 || condi2 || condi3 || condi4);
+			};
+
+			// function hitTest(source, target) { 
+			// 	/* 源物体和目标物体都包含 x, y 以及 width, height */
+			// 	return !(((source.y + source.r) < (target.y)) || (source.y > (target.y + target.r)) || ((source.x + source.r) <
+			// 		target.x) || (source.x > (target.x + target.r)));
+			// }
+			
+			
+			var AABBHit_bp = function(b,p){
+				 //检测两个物体，没有碰撞
+				 // 物体A：子弹
+				 // 物体B：敌机
+				// （1）物体A的Y轴方向最小值大于物体B的Y轴方向最大值；
+				 let condi1 = b.top > p.top + p.height ;		
+				// （2）物体A的X轴方向最小值大于物体B的X轴方向最大值；
+				let condi2 = b.left > p.left + p.width ;
+				// （3）物体B的Y轴方向最小值大于物体A的Y轴方向最大值；
+				let condi3 = p.top > b.top + b.height;
+				// （4）物体B的X轴方向最小值大于物体A的X轴方向最大值；
+				let condi4 = p.left > b.left + b.width;
+				return !(condi1 || condi2 || condi3 || condi4);
+			}
+		</script>
+
+		<script type="text/javascript">
+			function Bullet() {
+				this.init();
+			}
+			Bullet.prototype.init = function() {
+				this.bullets = [];
+			}
+			Bullet.prototype.move = function() {
+				let bullets = this.bullets;
+				for(let i=0;i<bullets.length;i++){
+					bullets[i].top -= 8;
+					if (bullets[i].top < -bullets[i].height) {
+						// 飞出边界，直接删除
+						bullets[i].parentNode.removeChild(bullets[i]);
+						bullets.splice(i,1);
+						i--;
+						return;
+						// 伪效果--玩家飞机不移动的情况下
+						// 假如玩家飞机没有移动的话 pos_x pos_y为undefined,
+						// 那么我们就使用默认值
+						// if(game.frames % 30 == 0){
+						// 	bullets[i].top = this.pos_y || Stage.height - bullets[i].height;
+						// 	bullets[i].left = (this.pos_x - bullets[i].width / 2) || (Stage.width - bullets[i].width) / 2;
+						// 	// console.log(this.pos_x)
+						// 	bullets[i].style.left = bullets[i].left + "px";
+							
+						// }
+						
+					}
+					bullets[i].style.top = bullets[i].top + "px";
+				}
+				
+			}
+			// 创建子弹
+			Bullet.prototype.create = function(){
+				
+				if(game.frames % 30 ==  0 && this.bullets.length < 10){
+					// 0.动态创建子弹
+					let bullet1 = this.createBullet()
+					// 1.子弹的尺寸
+					bullet1.width = 62;
+					bullet1.height = 106;
+					// 2.子弹的初始位置--都设置在舞台重点位置
+					bullet1.left = this.pos_x || (Stage.width - bullet1.width) / 2;
+					bullet1.style.left = bullet1.left + "px";
+					
+					bullet1.top = this.pos_y ||Stage.height - bullet1.height;
+					bullet1.style.top = bullet1.top + "px";
+					
+					// 创建好的子弹，push到数组中进行管理
+					this.bullets.push(bullet1);
+					main.insertBefore(bullet1, main.children[0]);
+				}
+				
+			}
+			// 修改子弹的坐标
+			Bullet.prototype.setPos = function(pos_x, pos_y) {
+				// console.log(pos_x,pos_y);
+				// 把飞机最新的坐标值，记录下来
+				this.pos_x = pos_x;
+				this.pos_y = pos_y;
+			}
+			Bullet.prototype.createBullet = function() {
+				let b = document.createElement("img");
+				b.src = "./images/bullet.png";
+				b.classList.add("bullet");
+				return b;
+			}
+		</script>
+
+
+
+		<script type="text/javascript">
+			function Enemy() {
+				this.init();
+			}
+			Enemy.prototype.init = function() {
+				this.plane = []; // 用来装载产生的敌机
+
+				// this.enemy_plane1 = this.createPlane();
+				// this.setPlane(this.enemy_plane1);
+				// this.plane.push(this.enemy_plane1);
+				// main.appendChild(this.enemy_plane1);
+			}
+			Enemy.prototype.create = function() {
+				console.log(this.plane.length);
+				// 每隔30张动画帧，生成一个敌机
+				// 节省性能开销，plane数组最多容纳5架敌机
+				if (window.game.frames % 120 === 0 && this.plane.length < 5) {
+					let plane = this.createPlane();
+					this.setPlane(plane);
+					// 将新创建的飞机，添加到plane数组，统一管理
+					this.plane.push(plane);
+					main.appendChild(plane);
+				}
+			}
+			// 给5分钟大家，封装setPlane方法
+			Enemy.prototype.setPlane = function(plane) {
+				plane.top = -(Stage.height * 0.6);
+				// this.enemy_plane1.top = 0;
+				// 随机产生敌机的水平坐标
+				plane.left = Math.random() * (Stage.width - 120);
+				plane.style.left = plane.left + "px";
+				plane.style.top = plane.top + "px";
+
+			}
+			Enemy.prototype.createPlane = function() {
+				// 动态创建一台敌机，到视图上
+				let enemy_plane1 = document.createElement("img");
+				enemy_plane1.src = "./images/enemy.png";
+				enemy_plane1.classList.add("enemy_plane")
+				// 动态修改敌机的尺寸
+
+				return enemy_plane1;
+			}
+			Enemy.prototype.move = function() {
+				let plane = this.plane;
+				// 检测子弹与敌机-碰撞检测
+				// 拿到子弹数组
+				let bullets = window.game.bullet.bullets;
+				// 循环判断，更新每架敌机的位置
+				// 因此，为了移除节点，同时更新视图，我们需要使用FOR循环
+				for(let i=0;i<this.plane.length;i++){
+					if (plane[i].top >= -10 && plane[i].top <= Stage.height) {
+						// 拿指针记录玩家飞机
+						let player = window.game.player.player;
+						// 检测玩家与敌机-碰撞检测
+						let isHit = AABBHit(player,plane[i]);
+						if(isHit && !plane[i].hidden){
+							console.log("碰到了");
+						}
+						for(let j=0;j<bullets.length;j++){
+							let bullet_isHit_plane = AABBHit_bp(bullets[j],plane[i]);
+							if(bullet_isHit_plane){
+								console.log("子弹击中敌机");
+								plane[i].hidden = true;
+								// 先操作逻辑层-更新视图层
+								plane[i].parentNode.removeChild(plane[i]);
+								// 移除了节点，不代表移除了数组成员！！
+								// 被移除的飞机，也不参与下一次的计算(移除当前的数组成员)
+								this.plane.splice(i,1);
+								// 下标同步更新
+								i--;
+								// console.log(window.game.enemy.plane)
+								// console.log(window.game.enemy.plane.length)
+								// debugger
+								// 权衡之后，最低成本，就是不改动数组成员
+								// 移除当前这颗子弹的dom节点(视图层)
+								bullets[j].parentNode.removeChild(bullets[j])
+								bullets.splice(j,1);
+								j--;
+								// 这颗子弹不参与下一次的计算(逻辑层)
+								// clearInterval(window.game.gameTimer);
+								// return终止下面边界判断
+								// 因为元素已被移除
+								return ;
+							}
+						}
+						// if(bullet){
+						// 	let bullet_isHit_plane = AABBHit_bp(bullet,plane[i]);
+						// 	if(bullet_isHit_plane){
+						// 		console.log("子弹击中敌机");
+						// 		plane[i].hidden = true;
+						// 		// 先操作逻辑层-更新视图层
+						// 		plane[i].parentNode.removeChild(plane[i]);
+						// 		// 移除了节点，不代表移除了数组成员！！
+						// 		// 被移除的飞机，也不参与下一次的计算(移除当前的数组成员)
+						// 		this.plane.splice(i,1);
+						// 		// 下标同步更新
+						// 		i--;
+						// 		// console.log(window.game.enemy.plane)
+						// 		// console.log(window.game.enemy.plane.length)
+						// 		// debugger
+						// 		// 权衡之后，最低成本，就是不改动数组成员
+						// 		// 移除当前这颗子弹的dom节点(视图层)
+						// 		bullet.parentNode.removeChild(bullet)
+						// 		// 这颗子弹不参与下一次的计算(逻辑层)
+						// 		window.game.bullet.bullet1 = null;
+						// 		// clearInterval(window.game.gameTimer);
+						// 	}
+						// }
+					}
+					// 敌机的边界判断
+					if (plane[i].top > Stage.height) {
+						plane[i].top = -(Stage.height * 0.6);
+						// 随机产生敌机的水平坐标
+						plane[i].left = Math.random() * (Stage.width - 120);
+						plane[i].style.left = plane[i].left + "px";
+						plane[i].hidden = false;
+					}
+					// 这个2是物体的移动速度 this.speed
+					plane[i].top += 2;
+					plane[i].style.top = plane[i].top + "px";
+				}
+				// ！！forEach里面千万不要有更新原数组的操作！！
+				// this.plane.forEach(function(ele,i) {
+					// 碰撞检测
+					// 如果在区间里面再进行检测
+					// if (ele.top >= -10 && ele.top <= Stage.height) {
+					// 	// 拿指针记录玩家飞机
+					// 	let player = window.game.player.player;
+					// 	// 检测玩家与敌机-碰撞检测
+					// 	let isHit = AABBHit(player,ele);
+					// 	if(isHit && !ele.hidden){
+					// 		console.log("碰到了");
+					// 	}
+					// 	// 检测子弹与敌机-碰撞检测
+					// 	let bullet = window.game.bullet.bullet1;
+					// 	if(bullet){
+					// 		let bullet_isHit_plane = AABBHit_bp(bullet,ele);
+					// 		if(bullet_isHit_plane){
+					// 			console.log("子弹击中敌机");
+					// 			ele.hidden = true;
+					// 			// 先操作逻辑层-更新视图层
+					// 			ele.parentNode.removeChild(ele);
+					// 			// 移除了节点，不代表移除了数组成员！！
+					// 			被移除的飞机，也不参与下一次的计算(移除当前的数组成员)
+					// 			this.plane.splice(i,1);
+					// 			// 权衡之后，最低成本，就是不改动数组成员
+					// 			// 移除当前这颗子弹的dom节点(视图层)
+					// 			bullet.parentNode.removeChild(bullet)
+					// 			// 这颗子弹不参与下一次的计算(逻辑层)
+					// 			window.game.bullet.bullet1 = null;
+					// 			// clearInterval(window.game.gameTimer);
+					// 		}
+					// 	}
+					// }
+					// 1.获取每个元素的
+
+					// // 敌机的边界判断
+					// if (ele.top > Stage.height) {
+					// 	ele.top = -(Stage.height * 0.6);
+					// 	// 随机产生敌机的水平坐标
+					// 	ele.left = Math.random() * (Stage.width - 120);
+					// 	ele.style.left = ele.left + "px";
+					// 	ele.hidden = false;
+					// }
+					// // 这个2是物体的移动速度 this.speed
+					// ele.top += 2;
+					// ele.style.top = ele.top + "px";
+
+				// })
+
+			}
+		</script>
+
+
+		<script type="text/javascript">
+			// 玩家飞机类
+			function Player() {
+				this.init();
+			}
+			Player.prototype.init = function() {
+				this.player = document.querySelector(".player");
+				// 1.确定飞机的尺寸
+				// 宽度:自定义飞机与屏幕的比例
+				let plane_w_radio = 160 / 375;
+				// 添加一个属性，专门用于后续的计算
+				this.player.width = parseInt(plane_w_radio * Stage.width);
+				this.player.style.width = this.player.width + "px";
+				// 关于飞机高度-根据图片的宽高比，进行换算
+				const pic_radio = 186 / 130; //图片宽高比
+				// 宽/高 = 宽/高
+
+				this.player.height = parseInt(this.player.width / pic_radio);
+				this.player.style.height = this.player.height + "px";
+
+				// 飞机坐标的更新---让飞机到屏幕的中间
+				this.player.pos_x = (Stage.width - this.player.width) / 2;
+				this.player.pos_y = Stage.height - this.player.height;
+
+
+
+				this.player.style.left = this.player.pos_x + "px";
+				this.player.style.top = this.player.pos_y + "px";
+
+				// 添加事件---飞机动起来
+				let that = this; //指向我们Player类
+
+				this.player.addEventListener("touchstart", function(e) {
+					//当前的this是指向了图片，而不是Player
+					// console.log(e.touches[0].clientX);
+					// 记录的是用户开始点击的坐标点
+					// e.touches是移动端事件专有的
+					that.player.start_x = e.touches[0].clientX;
+					that.player.start_y = e.touches[0].clientY;
+					// console.log("飞机当前的坐标",that.player)
+				}, {
+					passive: true
+				});
+
+				// 定义飞机水平方向左右边界
+				this.player.left_side = 0;
+				this.player.right_side = Stage.width - this.player.width;
+				// 定义飞机垂直方向上下边界
+				this.player.top_side = 0;
+				this.player.bottom_side = Stage.height - this.player.height;
+
+				this.player.addEventListener("touchmove", function(e) {
+					// console.log(e.touches[0].clientX);
+					that.player.now_x = e.touches[0].clientX;
+					that.player.now_y = e.touches[0].clientY;
+					let move_x = that.player.now_x - that.player.start_x;
+					let move_y = that.player.now_y - that.player.start_y;
+					// console.log("移动的距离",move_x);
+
+					// 把当前的now_x坐标，当作是下一次计算的起点
+					that.player.start_x = that.player.now_x;
+					that.player.start_y = that.player.now_y;
+
+					that.player.pos_x = that.player.pos_x + move_x;
+					that.player.pos_y = that.player.pos_y + move_y;
+
+					// 约束飞机水平方向
+					if (that.player.pos_x < that.player.left_side) {
+						that.player.pos_x = that.player.left_side;
+					}
+					if (that.player.pos_x >= that.player.right_side) {
+						that.player.pos_x = that.player.right_side;
+					}
+
+					// 约束飞机的垂直方向
+					if (that.player.pos_y <= that.player.top_side) {
+						that.player.pos_y = that.player.top_side;
+					}
+					if (that.player.pos_y >= that.player.bottom_side) {
+						that.player.pos_y = that.player.bottom_side;
+					}
+
+					// 将飞机最新的坐标通知到Bullet
+					// window.game.bullet.setPos(that.player.pos_x,that.player.pos_y);
+					// 换一种写法
+					// 水平方向:值的修正，避免子弹不在飞机的中心
+					let pos_x = that.player.pos_x + that.player.width / 2;
+					Bullet.prototype.setPos(pos_x, that.player.pos_y);
+
+					that.player.style.left = that.player.pos_x + "px";
+					that.player.style.top = that.player.pos_y + "px";
+					// 小作业:大家自行完成-Player飞机垂直方向的边缘检查
+
+				}, {
+					passive: true
+				})
+			}
+		</script>
+
+		<script type="text/javascript">
+			function BackGround() {
+				this.init();
+			}
+			BackGround.prototype.init = function() {
+				// let img = document.createElement("img")
+				// img.src = "./images/bg.jpg";
+				this.img = document.querySelector(".bg");
+				this.img.top = 0;
+
+				// 开始克隆一个新的背景图
+				// 直接书写克隆的逻辑代码/this.clonebg()
+				this.clonebg()
+			}
+			BackGround.prototype.clonebg = function() {
+				this.cloneImg = this.img.cloneNode(true);
+				// 需要对克隆背景图的坐标需要进行修正
+				this.cloneImg.style.top = "-" + (window.innerHeight - 1) + "px";
+				this.cloneImg.top = -(window.innerHeight - 1);
+				// 把克隆节点添加到舞台(main)上
+				main.appendChild(this.cloneImg);
+			};
+			BackGround.prototype.move = function() {
+				// console.log(this.img.style.top);
+				this.img.top += 4;
+				if (this.img.top >= Stage.height) {
+					this.img.top = 0;
+				}
+				this.img.style.top = this.img.top + "px";
+
+				this.cloneImg.top += 4;
+				if (this.cloneImg.top >= 1) {
+					this.cloneImg.top = -(Stage.height - 1);
+				}
+				this.cloneImg.style.top = this.cloneImg.top + "px";
+
+			}
+		</script>
+	</body>
+</html>
