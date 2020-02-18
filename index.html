@@ -130,8 +130,11 @@
 			
 			preload_obj.ele_text.innerText = now_n + "%";
 					if(preload_obj.n == preload_obj.sum){
-						console.log("所有图片加载完成")
-						// preload_obj.ele.style.display="none";
+						console.log("所有图片加载完成");
+						window.game = new Game();
+						setTimeout(function(){
+							preload_obj.ele.style.display="none";
+						},200)
 					}
 				}
 			})
