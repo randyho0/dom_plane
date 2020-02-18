@@ -324,13 +324,13 @@
 			}
 			// 创建子弹
 			Bullet.prototype.create = function(){
-				if(game.frames % 20 ==  0 && this.outBullets.length > 0){
+				if(game.frames % 30 ==  0 && this.outBullets.length > 0){
 					// 切除数组的第一个元素
 					let bullet1 = this.outBullets.shift();
 					this.setBullet(bullet1);
 				}
 				
-				if(game.frames % 20 ==  0 && this.bullets.length < 20 && this.outBullets.length == 0){
+				if(game.frames % 30 ==  0 && this.bullets.length < 10 && this.outBullets.length == 0){
 					// 0.动态创建子弹
 					let bullet1 = this.createBullet();
 					this.setBullet(bullet1);
