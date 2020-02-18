@@ -36,7 +36,22 @@
 			body {
 				margin: 0;
 			}
-
+			#preload{
+				position: fixed;
+				top: 0;
+				bottom: 0;
+				left: 0;
+				right: 0;
+				z-index: 10;
+				
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				
+				font-size: 30px;
+				color: #fff;
+				background-color: green;
+			}
 			#main {
 				position: relative;
 
@@ -86,6 +101,41 @@
 				font-size: 30px;
 			}
 		</style>
+		<div id="preload">
+			加载中。。。<span>0%</span>
+		</div>
+		<script type="text/javascript">
+			// 定义一个数组，用于存放图片地址
+			// 分析，我们用到哪些图片----玩家飞机，敌机，子弹，背景图
+			var imgList = [
+				"./images/hero.png",
+				"./images/enemy.png",
+				"./images/bullet.png",
+				"./images/bg.jpg"
+			];
+			var preload_obj = {
+				ele:document.querySelector("#preload"),
+				ele_text:document.querySelector("#preload>span"),
+				n:0, // 用来记录成功执行onload事件的成员
+				sum:imgList.length
+			};
+			
+			imgList.forEach(function(ele,index){
+				var image = new Image();
+				image.src = ele;
+				image.onload = function(){
+					console.log(index);
+					preload_obj.n++;
+			let now_n = parseInt(preload_obj.n / preload_obj.sum * 100);
+			
+			preload_obj.ele_text.innerText = now_n + "%";
+					if(preload_obj.n == preload_obj.sum){
+						console.log("所有图片加载完成")
+						// preload_obj.ele.style.display="none";
+					}
+				}
+			})
+		</script>
 		<div id="main">
 			<!-- <img src="images/bullet.png" class="bullet" > -->
 			<img src="images/hero.png" class="player">
@@ -94,7 +144,7 @@
 		<div class="score">0</div>
 		<script type="text/javascript">
 			window.onload = function() {
-				window.game = new Game();
+				// window.game = new Game();
 			}
 			// 单独配置一个舞台信息的对象
 			const Stage = {
