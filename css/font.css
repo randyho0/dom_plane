@@ -1,0 +1,9 @@
+@font-face {
+    font-family: 'FZCHYK';
+    src: url(./fonts/FZCHYK.TTF);
+    font-weight: normal;
+    font-style: normal;
+}
+.wrapper {
+    font-family: 'FZCHYK';
+}
