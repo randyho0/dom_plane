@@ -3,6 +3,7 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>DOM版的飞机游戏</title>
+		<meta name="keyword" content="DOM版的飞机游戏" />
 		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
 	</head>
 	<body>
@@ -650,6 +651,7 @@
 				// 需要对克隆背景图的坐标需要进行修正
 				this.cloneImg.style.top = "-" + (window.innerHeight - 1) + "px";
 				this.cloneImg.top = -(window.innerHeight - 1);
+				console.log('this.cloneImg.top', this.cloneImg.top)
 				// 把克隆节点添加到舞台(main)上
 				main.appendChild(this.cloneImg);
 			};
@@ -666,7 +668,6 @@
 					this.cloneImg.top = -(Stage.height - 1);
 				}
 				this.cloneImg.style.top = this.cloneImg.top + "px";
-
 			}
 		</script>
 	</body>
